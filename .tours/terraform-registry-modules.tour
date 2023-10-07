@@ -1,0 +1,98 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Terraform Registry Modules",
+  "steps": [
+    {
+      "file": "main.tf",
+      "description": "The Terraform and AWS Providers have been configured for you.",
+      "line": 1,
+      "title": "Provider"
+    },
+    {
+      "file": "main.tf",
+      "description": "Click **Insert Code** to insert the following code, then click **Next**:\n\n```js\nlocals {\n  region      = \"us-west-2\"\n  name        = \"lab\"\n  environment = \"prod\"\n\n  vpc_cidr        = \"10.0.0.0/16\"\n  azs             = [\"us-west-2a\", \"us-west-2b\", \"us-west-2c\"]\n  private_subnets = [\"10.0.1.0/24\", \"10.0.2.0/24\", \"10.0.3.0/24\"]\n  public_subnets  = [\"10.0.101.0/24\", \"10.0.102.0/24\", \"10.0.103.0/24\"]\n}\n  \n\n```",
+      "line": 99,
+      "title": "Local Variables"
+    },
+    {
+      "file": "main.tf",
+      "description": "The following variables are used throughout the `main.tf` file and apply to the whole configuration:\n\n- `region`\n- `name`\n- `environment`\n\nThe following local variables will be used to configure the VPC module:\n\n- `vpc_cidr`: The IPV4 CIDR block to specify for the VPC resource\n- `azs` : A list of availability zones to be used in the `us-west-2` region\n- `private_subnets`: A list of CIDR blocks that will host the private subnets\n- `public_subnets`: A list of CIDR blocks that will host the public subnets\n",
+      "line": 26,
+      "title": "Local Variables"
+    },
+    {
+      "file": "main.tf",
+      "description": "Click **Insert Code** to begin configuring the VPC, then click **Next**:\n\n```js\nmodule \"vpc\" {\n  source  = \"terraform-aws-modules/vpc/aws\"\n  version = \">= 5.0.0\"\n\n  name = local.name\n  cidr = local.vpc_cidr\n\n  azs             = local.azs\n  private_subnets = local.private_subnets\n  public_subnets  = local.public_subnets\n\n\n```",
+      "line": 120,
+      "title": "VPC Module"
+    },
+    {
+      "file": "main.tf",
+      "description": "The VPC module begins with the `source` argument. The `source` and `version` arguments can be found in the **Provision Instructions** of the [AWS VPC Module Documentation](https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest).\n\nThe local variables defined previously are referenced as values for their matching arguments.\n\nUnder the hood, the VPC module will use these subnet arguments to create one subnet for each CIDR block defined in the `private_subnets` and `public_subnets` variables.",
+      "line": 28,
+      "title": "VPC Module"
+    },
+    {
+      "file": "main.tf",
+      "description": "Click **Insert Code** to insert the following code, then click **Next**:\n\n```js\n  enable_nat_gateway     = true\n  single_nat_gateway     = true\n  \n  reuse_nat_ips          = true\n  external_nat_ip_ids    = [aws_eip.nat.id]\n\n\n```",
+      "line": 94,
+      "title": "NAT Gateway"
+    },
+    {
+      "file": "main.tf",
+      "description": "The arguments related to the NAT Gateway resource and their default values are covered in the [**Inputs** section](https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest?tab=inputs) of the VPC module documentation.\n\n- **enable_nat_gateway**: Set to `true` if you want to provision NAT Gateways for each of your private networks\n- **single_nat_gateway**: Set to `true` if you want to provision a single shared NAT Gateway across all of your private networks\n- **reuse_nat_ips**: Set to `true` if you don't want EIPs to be created for your NAT Gateways and will instead pass them in via the `external_nat_ip_ids` variable\n- **external_nat_ip_ids**: List of EIP IDs to be assigned to the NAT Gateways\n\nWhen this VPC module is applied, new IPs are allocated for the NAT Gateway resource by default. If this VPC resource is destroyed, the IPs will be released. To override this default behavior, the `reuse_nat_ips` and `external_nat_ip_ids` variables are used to preserve the elastic IPs after the VPC is destroyed.",
+      "line": 45,
+      "title": "NAT Gateway"
+    },
+    {
+      "file": "main.tf",
+      "description": "Click **Insert Code** to insert the following code, then click **Next**:\n\n```js\n  manage_default_network_acl    = true\n  manage_default_route_table    = true\n  manage_default_security_group = true\n\n\n```",
+      "line": 77,
+      "title": "Defaults"
+    },
+    {
+      "file": "main.tf",
+      "description": "The `manage_default` arguments can be set to `true` if you'd like to adopt and manage the default versions of each resource. \n\nThis allows you to configure Network ACL rules, routes, and security group rules within this VPC module. ",
+      "line": 49,
+      "title": "Defaults"
+    },
+    {
+      "file": "main.tf",
+      "description": "To complete the VPC module configuration, click **Insert Code** to insert the following, then click **Next**:\n\n```js\n  default_network_acl_tags = {\n    Name = \"${local.name}-default\"\n  }\n\n  default_route_table_tags = {\n    Name = \"${local.name}-default\"\n  }\n\n  default_security_group_tags = {\n    Name = \"${local.name}-default\"\n  }\n\n  tags = {\n    Name        = \"${local.name}-vpc\"\n    Environment = local.environment\n  }\n}\n\n\n```",
+      "line": 115,
+      "title": "Tags"
+    },
+    {
+      "file": "main.tf",
+      "description": "The tag arguments are examples of configurations that depend on previously defined values. Since the Network ACL, Route Table, and Security Group resources are managed by this VPC module, you can configure any related arguments in this module (in this case, the resource tags).",
+      "line": 65,
+      "title": "Tags"
+    },
+    {
+      "file": "main.tf",
+      "description": "The final configuration is for the separate elastic IP address used by your NAT gateway. The `eip` resource will be created separately from the VPC to ensure it does not get deleted if the VPC is destroyed.\n\nClick **Insert Code** to insert the following code, then click **Next**:\n\n```js\nresource \"aws_eip\" \"nat\" {\n  domain = \"vpc\"\n}\n```",
+      "line": 73,
+      "title": "Elastic IP Address"
+    },
+    {
+      "directory": "",
+      "description": "Click the following command to initialize the Terraform directory and pull in the VPC module:\n\n>> terraform init\n\nIn the **Explorer** section to the left, you will notice a `.terraform/modules/vpc` directory has been created. The `init` command has pulled in the latest version of the `vpc` module to apply to this configuration.",
+      "title": "Init"
+    },
+    {
+      "directory": "",
+      "description": "Click the following command to view the Terraform plan:\n\n>> terraform plan\n\nThe outlined plan presents 22 resources that will be created using this VPC module and 23 resources in total. ",
+      "title": "Plan"
+    },
+    {
+      "directory": "",
+      "description": "Click the command below to apply your changes and deploy your VPC:\n\n>> terraform apply --auto-approve",
+      "title": "Apply"
+    },
+    {
+      "directory": "",
+      "description": "You have successfully configured an Amazon VPC using a public Terraform module.\n\nReturn to the Cloud Academy Lab browser tab and run the validation check associated with this lab step.",
+      "title": "Complete"
+    }
+  ]
+}
